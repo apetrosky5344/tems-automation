@@ -1,0 +1,47 @@
+---
+- name: Install and Configure MinIO Storage
+  hosts: storageservers
+  become: true
+  vars_files:
+    - vars/vars.yml
+    - vars/secret-vars.yml
+  tasks:
+    - name: Update and Upgrade System Packages
+      apt:
+        update_cache: yes
+        upgrade: dist
+
+    - name: Download MinIO Binary
+      get_url:
+        url: "https://dl.min.io/server/minio/release/linux-amd64/minio"
+        dest: "/usr/local/bin/minio"
+        mode: '0755'
+
+    - name: Create MinIO Directories
+      file:
+        path: "/data/minio"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Create MinIO Service
+      copy:
+        dest: "/etc/systemd/system/minio.service"
+        content: |
+          [Unit]
+          Description=MinIO Storage Service
+          After=network.target
+
+          [Service]
+          ExecStart=/usr/local/bin/minio server /data/minio --console-address ':9001'
+          Restart=always
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Start and Enable MinIO Service
+      systemd:
+        name: minio
+        state: started
+        enabled: yes

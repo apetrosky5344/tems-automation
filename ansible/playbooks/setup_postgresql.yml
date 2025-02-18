@@ -1,0 +1,56 @@
+---
+- name: Install and Configure PostgreSQL
+  hosts: databases
+  become: true
+  vars_files:
+    - vars/vars.yml
+    - vars/secret-vars.yml
+  tasks:
+    - name: Install PostgreSQL
+      apt:
+        name: "postgresql-{{ postgres_version }}"
+        state: present
+
+    - name: Start and Enable PostgreSQL
+      systemd:
+        name: postgresql
+        state: started
+        enabled: yes
+
+    - name: Configure PostgreSQL to Accept Remote Connections
+      lineinfile:
+        path: "/etc/postgresql/{{ postgres_version }}/main/postgresql.conf"
+        regexp: "^#?listen_addresses"
+        line: "listen_addresses = '*'"
+
+    - name: Allow Authentication for TEMS Database User
+      blockinfile:
+        path: "/etc/postgresql/{{ postgres_version }}/main/pg_hba.conf"
+        block: |
+          host    all             {{ db_user }}     0.0.0.0/0            md5
+          host    replication     {{ pg_replica_user }}     0.0.0.0/0            md5
+
+    - name: Create TEMS Database and Users
+      become_user: postgres
+      postgresql_db:
+        name: "{{ db_name }}"
+        state: present
+      postgresql_user:
+        db: "{{ db_name }}"
+        name: "{{ db_user }}"
+        password: "{{ db_password }}"
+        priv: "ALL"
+        state: present
+      postgresql_user:
+        db: "{{ db_name }}"
+        name: "{{ pg_replica_user }}"
+        password: "{{ pg_replica_password }}"
+        role_attr_flags: "REPLICATION"
+        state: present
+
+    - name: Load Initial Database Schema
+      become_user: postgres
+      postgresql_script:
+        db: "{{ db_name }}"
+        path: "/var/lib/postgresql/schema.sql"
+

@@ -1,0 +1,40 @@
+---
+- name: Configure Load Balancer
+  hosts: loadbalancer
+  become: true
+  vars_files:
+    - vars/vars.yml
+    - vars/secret-vars.yml
+  tasks:
+    - name: Update and Upgrade System Packages
+      apt:
+        update_cache: yes
+        upgrade: dist
+
+    - name: Install Nginx
+      apt:
+        name: nginx
+        state: present
+
+    - name: Configure Nginx for Load Balancing
+      copy:
+        dest: "/etc/nginx/sites-available/tems"
+        content: |
+          upstream tems_backend {
+              server 10.2.37.61:5000;
+              server 10.2.37.62:5000;
+          }
+          server {
+              listen 80;
+              server_name yourdomain.com;
+              location / {
+                  proxy_pass http://tems_backend;
+              }
+          }
+    - name: Enable Load Balancer
+      command: ln -s /etc/nginx/sites-available/tems /etc/nginx/sites-enabled/
+
+    - name: Restart Nginx
+      systemd:
+        name: nginx
+        state: restarted

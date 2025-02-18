@@ -1,0 +1,25 @@
+---
+- name: Preconfigure Database Servers
+  hosts: databases
+  become: true
+  vars_files:
+    - vars/vars.yml
+    - vars/secret-vars.yml
+  tasks:
+    - name: Update and Upgrade System Packages
+      apt:
+        update_cache: yes
+        upgrade: dist
+
+    - name: Install Essential Utilities
+      apt:
+        name:
+          - vim
+          - curl
+          - wget
+          - net-tools
+          - ufw
+          - htop
+          - unzip
+          - software-properties-common
+        state: present

@@ -1,0 +1,6 @@
+# vars.yml
+postgres_version: "16"
+db_name: tems_db
+db_user: tems_admin
+pg_replica_user: replicator
+minio_root_user: minioadmin

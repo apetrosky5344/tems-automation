@@ -1,0 +1,65 @@
+---
+- name: Install and Configure Web Servers
+  hosts: webservers
+  become: true
+  vars_files:
+    - vars/vars.yml
+    - vars/secret-vars.yml
+  tasks:
+    - name: Update and Upgrade System Packages
+      apt:
+        update_cache: yes
+        upgrade: dist
+
+    - name: Install Flask & Dependencies
+      apt:
+        name:
+          - python3-pip
+          - nginx
+        state: present
+
+    - name: Clone TEMS Web Application
+      git:
+        repo: "https://github.com/yourusername/tems-automation.git"
+        dest: "/var/www/tems"
+        clone: yes
+        update: yes
+
+    - name: Install Required Python Packages
+      pip:
+        requirements: "/var/www/tems/requirements.txt"
+        virtualenv: "/var/www/tems/venv"
+
+    - name: Create .env File for Flask App
+      copy:
+        dest: "/var/www/tems/.env"
+        content: |
+          DB_NAME={{ db_name }}
+          DB_USER={{ db_user }}
+          DB_PASS={{ db_password }}
+          DB_HOST=10.2.37.63
+          DB_PORT=5432
+
+    - name: Create Systemd Service for TEMS Web Application
+      copy:
+        dest: "/etc/systemd/system/tems_app.service"
+        content: |
+          [Unit]
+          Description=TEMS Web Application
+          After=network.target
+          
+          [Service]
+          User=tems_admin
+          WorkingDirectory=/var/www/tems
+          ExecStart=/var/www/tems/venv/bin/python /var/www/tems/app.py
+          Restart=always
+          
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Reload Systemd and Enable TEMS App Service
+      systemd:
+        daemon_reload: yes
+        name: tems_app
+        state: started
+        enabled: yes

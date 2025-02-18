@@ -1,0 +1,24 @@
+---
+- name: Secure Load Balancer with HTTPS
+  hosts: loadbalancer
+  become: true
+  vars_files:
+    - vars/vars.yml
+    - vars/secret-vars.yml
+  tasks:
+    - name: Update and Upgrade System Packages
+      apt:
+        update_cache: yes
+        upgrade: dist
+
+    - name: Install Certbot
+      apt:
+        name:
+          - certbot
+          - python3-certbot-nginx
+        state: present
+
+    - name: Obtain SSL Certificate
+      command: certbot --nginx -d yourdomain.com -d www.yourdomain.com --non-interactive --agree-tos -m admin@yourdomain.com
+      args:
+        creates: /etc/letsencrypt/live/yourdomain.com/fullchain.pem
