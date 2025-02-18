@@ -3,13 +3,19 @@
   hosts: loadbalancer
   become: true
   vars_files:
-    - vars/vars.yml
-    - vars/secret-vars.yml
+    - ../vars/vars.yml
+    - ../vars/secret-vars.yml
   tasks:
+
     - name: Update and Upgrade System Packages
       apt:
         update_cache: yes
         upgrade: dist
+
+    - name: Install Snap (Required for Certbot)
+      apt:
+        name: snapd
+        state: present
 
     - name: Install Nginx
       apt:
@@ -18,21 +24,25 @@
 
     - name: Configure Nginx for Load Balancing
       copy:
-        dest: "/etc/nginx/sites-available/tems"
+        dest: "/etc/nginx/sites-available/tems_loadbalancer"
         content: |
           upstream tems_backend {
-              server 10.2.37.61:5000;
-              server 10.2.37.62:5000;
+              server "{{ web_server_1 }}:5000";
+              server "{{ web_server_2 }}:5000";
           }
           server {
               listen 80;
-              server_name yourdomain.com;
+              server_name "{{ load_balancer_ip }}";
               location / {
                   proxy_pass http://tems_backend;
               }
           }
     - name: Enable Load Balancer
-      command: ln -s /etc/nginx/sites-available/tems /etc/nginx/sites-enabled/
+      file:
+        src: /etc/nginx/sites-available/tems_loadbalancer
+        dest: /etc/nginx/sites-enabled/tems_loadbalancer
+        state: link
+
 
     - name: Restart Nginx
       systemd:

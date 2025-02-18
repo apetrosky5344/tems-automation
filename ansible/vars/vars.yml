@@ -4,3 +4,6 @@ db_name: tems_db
 db_user: tems_admin
 pg_replica_user: replicator
 minio_root_user: minioadmin
+web_server_1: "10.2.37.61"
+web_server_2: "10.2.37.62"
+load_balancer_ip: "10.2.37.60"

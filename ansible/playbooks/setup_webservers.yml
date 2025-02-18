@@ -15,15 +15,29 @@
       apt:
         name:
           - python3-pip
+          - python3-venv  # Ensure virtualenv is available
           - nginx
         state: present
 
     - name: Clone TEMS Web Application
       git:
-        repo: "https://github.com/yourusername/tems-automation.git"
+        repo: "https://github.com/apetrosky5344/tems-automation.git"
         dest: "/var/www/tems"
         clone: yes
         update: yes
+
+    - name: Verify if requirements.txt exists
+      stat:
+        path: "/var/www/tems/requirements.txt"
+      register: req_file
+
+    - name: Fail if requirements.txt is missing
+      fail:
+        msg: "The requirements.txt file is missing. Please ensure the repository is correctly cloned."
+      when: not req_file.stat.exists
+
+    - name: Create Virtual Environment for Python
+      command: python3 -m venv /var/www/tems/venv
 
     - name: Install Required Python Packages
       pip:
@@ -47,13 +61,13 @@
           [Unit]
           Description=TEMS Web Application
           After=network.target
-          
+
           [Service]
           User=tems_admin
           WorkingDirectory=/var/www/tems
           ExecStart=/var/www/tems/venv/bin/python /var/www/tems/app.py
           Restart=always
-          
+
           [Install]
           WantedBy=multi-user.target
 

@@ -11,14 +11,23 @@
         update_cache: yes
         upgrade: dist
 
-    - name: Install Certbot
-      apt:
-        name:
-          - certbot
-          - python3-certbot-nginx
-        state: present
-
-    - name: Obtain SSL Certificate
-      command: certbot --nginx -d yourdomain.com -d www.yourdomain.com --non-interactive --agree-tos -m admin@yourdomain.com
+    - name: Install Certbot using Snap (avoiding APT issues)
+      command: snap install --classic certbot
       args:
-        creates: /etc/letsencrypt/live/yourdomain.com/fullchain.pem
+        creates: /snap/bin/certbot
+
+    - name: Ensure Certbot is in PATH
+      command: ln -s /snap/bin/certbot /usr/bin/certbot
+      args:
+        creates: /usr/bin/certbot
+
+    - name: Obtain SSL Certificate using Load Balancer IP
+      command: certbot --nginx -d {{ load_balancer_ip }} --non-interactive --agree-tos -m admin@yourdomain.com
+      args:
+        creates: /etc/letsencrypt/live/{{ load_balancer_ip }}/fullchain.pem
+
+    - name: Setup Auto-Renewal for SSL
+      cron:
+        name: "Renew SSL Certificate"
+        job: "certbot renew --quiet"
+        special_time: weekly

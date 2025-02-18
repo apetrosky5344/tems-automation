@@ -39,9 +39,13 @@
 
           [Install]
           WantedBy=multi-user.target
+    - name: Reload systemd daemon
+      command: systemctl daemon-reload
+      become: true
 
     - name: Start and Enable MinIO Service
       systemd:
         name: minio
         state: started
         enabled: yes
+
