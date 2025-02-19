@@ -3,8 +3,8 @@
   hosts: webservers
   become: true
   vars_files:
-    - vars/vars.yml
-    - vars/secret-vars.yml
+    - ../vars/vars.yml
+    - ../vars/secret-vars.yml
   tasks:
     - name: Update and Upgrade System Packages
       apt:
@@ -26,33 +26,42 @@
         clone: yes
         update: yes
 
-    - name: Verify if requirements.txt exists
-      stat:
-        path: "/var/www/tems/requirements.txt"
-      register: req_file
-
-    - name: Fail if requirements.txt is missing
-      fail:
-        msg: "The requirements.txt file is missing. Please ensure the repository is correctly cloned."
-      when: not req_file.stat.exists
+    - name: Ensure Correct Repository Paths
+      file:
+        path: "/var/www/tems/webapp"
+        state: directory
+        owner: tems_admin
+        group: tems_admin
+        mode: '0755'
 
     - name: Create Virtual Environment for Python
       command: python3 -m venv /var/www/tems/venv
+      args:
+        creates: /var/www/tems/venv
 
     - name: Install Required Python Packages
       pip:
-        requirements: "/var/www/tems/requirements.txt"
+        requirements: "/var/www/tems/webapp/requirements.txt"
         virtualenv: "/var/www/tems/venv"
 
     - name: Create .env File for Flask App
       copy:
         dest: "/var/www/tems/.env"
         content: |
-          DB_NAME={{ db_name }}
-          DB_USER={{ db_user }}
-          DB_PASS={{ db_password }}
-          DB_HOST=10.2.37.63
-          DB_PORT=5432
+          DB_NAME= "{{ db_name }}"
+          DB_USER= "{{ db_user }}"
+          DB_PASS= "{{ db_password }}"
+          DB_HOST= "{{ db_host }}"
+          DB_PORT= "{{ db_port }}"
+
+    - name: Set Correct Permissions for Web Application Directory
+      file:
+        path: "/var/www/tems"
+        state: directory
+        owner: tems_admin
+        group: tems_admin
+        mode: '0755'
+        recurse: yes
 
     - name: Create Systemd Service for TEMS Web Application
       copy:
@@ -64,12 +73,13 @@
 
           [Service]
           User=tems_admin
-          WorkingDirectory=/var/www/tems
-          ExecStart=/var/www/tems/venv/bin/python /var/www/tems/app.py
+          WorkingDirectory=/var/www/tems/webapp
+          ExecStart=/var/www/tems/venv/bin/python /var/www/tems/webapp/app.py
           Restart=always
 
           [Install]
           WantedBy=multi-user.target
+      notify: Restart TEMS App Service
 
     - name: Reload Systemd and Enable TEMS App Service
       systemd:
@@ -77,3 +87,10 @@
         name: tems_app
         state: started
         enabled: yes
+
+  handlers:
+    - name: Restart TEMS App Service
+      systemd:
+        name: tems_app
+        state: restarted
+

@@ -2,6 +2,8 @@
 postgres_version: "16"
 db_name: tems_db
 db_user: tems_admin
+db_host: "10.2.37.63"
+db_port: "5432"
 pg_replica_user: replicator
 minio_root_user: minioadmin
 web_server_1: "10.2.37.61"
