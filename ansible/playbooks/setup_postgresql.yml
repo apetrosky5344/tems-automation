@@ -3,13 +3,15 @@
   hosts: databases
   become: true
   vars_files:
-    - vars/vars.yml
-    - vars/secret-vars.yml
+    - ../vars/vars.yml
+    - ../vars/secret-vars.yml
+
   tasks:
     - name: Install PostgreSQL
       apt:
         name: "postgresql-{{ postgres_version }}"
         state: present
+        update_cache: yes
 
     - name: Start and Enable PostgreSQL
       systemd:
@@ -22,6 +24,7 @@
         path: "/etc/postgresql/{{ postgres_version }}/main/postgresql.conf"
         regexp: "^#?listen_addresses"
         line: "listen_addresses = '*'"
+      notify: Restart PostgreSQL
 
     - name: Allow Authentication for TEMS Database User
       blockinfile:
@@ -29,28 +32,49 @@
         block: |
           host    all             {{ db_user }}     0.0.0.0/0            md5
           host    replication     {{ pg_replica_user }}     0.0.0.0/0            md5
+      notify: Restart PostgreSQL
 
-    - name: Create TEMS Database and Users
+    - name: Create TEMS Database
       become_user: postgres
       postgresql_db:
         name: "{{ db_name }}"
+        encoding: "UTF8"
         state: present
+
+    - name: Create TEMS DB User
+      become_user: postgres
       postgresql_user:
-        db: "{{ db_name }}"
         name: "{{ db_user }}"
         password: "{{ db_password }}"
+        db: "{{ db_name }}"
         priv: "ALL"
         state: present
+
+    - name: Create Replication User
+      become_user: postgres
       postgresql_user:
-        db: "{{ db_name }}"
         name: "{{ pg_replica_user }}"
         password: "{{ pg_replica_password }}"
         role_attr_flags: "REPLICATION"
         state: present
 
-    - name: Load Initial Database Schema
+    - name: Copy DB schema to server
+      copy:
+        src: ../files/UpdatedTemsSQL.sql
+        dest: /var/lib/postgresql/UpdatedTemsSQL.sql
+        owner: postgres
+        group: postgres
+        mode: '0644'
+
+    - name: Load Initial Database Schema (only on primary)
       become_user: postgres
       postgresql_script:
         db: "{{ db_name }}"
-        path: "/var/lib/postgresql/schema.sql"
+        path: "/var/lib/postgresql/UpdatedTemsSQL.sql"
+      when: inventory_hostname == "{{ db_host }}"
 
+  handlers:
+    - name: Restart PostgreSQL
+      systemd:
+        name: postgresql
+        state: restarted

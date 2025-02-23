@@ -1,11 +1,15 @@
-# vars.yml
 postgres_version: "16"
-db_name: tems_db
-db_user: tems_admin
-db_host: "10.2.37.63"
+db_name: "tems_db"
+db_user: "tems_admin"
+db_host: "10.2.37.63"   # If there's a primary DB node
 db_port: "5432"
-pg_replica_user: replicator
-minio_root_user: minioadmin
+pg_replica_user: "replicator"
+
+minio_root_user: "minioadmin"
+minio_data_dir: "/data/minio"
+minio_console_port: "9001"
+
 web_server_1: "10.2.37.61"
 web_server_2: "10.2.37.62"
 load_balancer_ip: "10.2.37.60"
+lb_domain_name: "yourdomain.com"  # If using Let's Encrypt with a domain

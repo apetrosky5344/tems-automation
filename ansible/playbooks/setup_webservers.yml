@@ -1,96 +1,103 @@
 ---
-- name: Install and Configure Web Servers
-  hosts: webservers
+- name: Install and Configure Web Servers (Gunicorn for Flask)
+  hosts: 10.2.37.62
   become: true
   vars_files:
     - ../vars/vars.yml
     - ../vars/secret-vars.yml
+
   tasks:
     - name: Update and Upgrade System Packages
       apt:
         update_cache: yes
         upgrade: dist
 
-    - name: Install Flask & Dependencies
+    - name: Install dependencies
       apt:
         name:
           - python3-pip
-          - python3-venv  # Ensure virtualenv is available
-          - nginx
+          - python3-venv
+          - nginx   # If needed locally, but the LB is also running Nginx
         state: present
 
-    - name: Clone TEMS Web Application
-      git:
-        repo: "https://github.com/apetrosky5344/tems-automation.git"
-        dest: "/var/www/tems"
-        clone: yes
-        update: yes
-
-    - name: Ensure Correct Repository Paths
+    - name: Create /var/www/tems directory
       file:
-        path: "/var/www/tems/webapp"
+        path: /var/www/tems
         state: directory
-        owner: tems_admin
-        group: tems_admin
+        owner: root
+        group: root
         mode: '0755'
 
-    - name: Create Virtual Environment for Python
+    - name: Create Python virtual environment
       command: python3 -m venv /var/www/tems/venv
       args:
         creates: /var/www/tems/venv
 
-    - name: Install Required Python Packages
+    - name: Copy requirements.txt
+      copy:
+        src: ../files/requirements.txt
+        dest: /var/www/tems/requirements.txt
+
+    - name: Install Python packages
       pip:
-        requirements: "/var/www/tems/webapp/requirements.txt"
-        virtualenv: "/var/www/tems/venv"
+        requirements: /var/www/tems/requirements.txt
+        virtualenv: /var/www/tems/venv
 
-    - name: Create .env File for Flask App
+    - name: Copy Flask app (app.py)
       copy:
-        dest: "/var/www/tems/.env"
-        content: |
-          DB_NAME= "{{ db_name }}"
-          DB_USER= "{{ db_user }}"
-          DB_PASS= "{{ db_password }}"
-          DB_HOST= "{{ db_host }}"
-          DB_PORT= "{{ db_port }}"
-
-    - name: Set Correct Permissions for Web Application Directory
-      file:
-        path: "/var/www/tems"
-        state: directory
-        owner: tems_admin
-        group: tems_admin
+        src: ../files/app.py
+        dest: /var/www/tems/app.py
         mode: '0755'
-        recurse: yes
 
-    - name: Create Systemd Service for TEMS Web Application
+    - name: Copy HTML templates
       copy:
-        dest: "/etc/systemd/system/tems_app.service"
+        src: ../files/templates/
+        dest: /var/www/tems/templates/
+        mode: '0755'
+      with_fileglob:
+        - "*.html"
+      loop_control:
+        label: "{{ item }}"
+
+    - name: Copy static files
+      copy:
+        src: ../files/static/
+        dest: /var/www/tems/static/
+        mode: '0755'
+      with_fileglob:
+        - "*.css"
+      loop_control:
+        label: "{{ item }}"
+
+    - name: Copy .env
+      copy:
+        src: ../files/env.txt
+        dest: /var/www/tems/.env
+        mode: '0600'
+
+    - name: Create systemd service for TEMS (Gunicorn)
+      copy:
+        dest: /etc/systemd/system/tems_app.service
         content: |
           [Unit]
-          Description=TEMS Web Application
+          Description=TEMS Flask App
           After=network.target
 
           [Service]
-          User=tems_admin
-          WorkingDirectory=/var/www/tems/webapp
-          ExecStart=/var/www/tems/venv/bin/python /var/www/tems/webapp/app.py
+          User=root
+          Group=root
+          WorkingDirectory=/var/www/tems
+          EnvironmentFile=/var/www/tems/.env
+          ExecStart=/var/www/tems/venv/bin/gunicorn --bind 0.0.0.0:5000 app:app
           Restart=always
 
           [Install]
           WantedBy=multi-user.target
-      notify: Restart TEMS App Service
-
-    - name: Reload Systemd and Enable TEMS App Service
-      systemd:
-        daemon_reload: yes
-        name: tems_app
-        state: started
-        enabled: yes
+      notify: Restart TEMS
 
   handlers:
-    - name: Restart TEMS App Service
+    - name: Restart TEMS
       systemd:
         name: tems_app
         state: restarted
-
+        enabled: yes

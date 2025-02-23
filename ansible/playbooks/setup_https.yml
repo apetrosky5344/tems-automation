@@ -3,31 +3,39 @@
   hosts: loadbalancer
   become: true
   vars_files:
-    - vars/vars.yml
-    - vars/secret-vars.yml
-  tasks:
-    - name: Update and Upgrade System Packages
-      apt:
-        update_cache: yes
-        upgrade: dist
+    - ../vars/vars.yml
+    - ../vars/secret-vars.yml
 
-    - name: Install Certbot using Snap (avoiding APT issues)
+  tasks:
+    - name: Install Snapd
+      apt:
+        name: snapd
+        state: present
+
+    - name: Install Certbot using Snap
       command: snap install --classic certbot
       args:
         creates: /snap/bin/certbot
 
-    - name: Ensure Certbot is in PATH
-      command: ln -s /snap/bin/certbot /usr/bin/certbot
-      args:
-        creates: /usr/bin/certbot
+    - name: Ensure Certbot in PATH
+      file:
+        src: /snap/bin/certbot
+        dest: /usr/bin/certbot
+        state: link
+      ignore_errors: true
 
-    - name: Obtain SSL Certificate using Load Balancer IP
-      command: certbot --nginx -d {{ load_balancer_ip }} --non-interactive --agree-tos -m admin@yourdomain.com
+    - name: Obtain SSL Certificate
+      command: >
+        certbot --nginx
+        -d {{ lb_domain_name }}
+        --non-interactive
+        --agree-tos
+        -m admin@{{ lb_domain_name }}
       args:
-        creates: /etc/letsencrypt/live/{{ load_balancer_ip }}/fullchain.pem
+        creates: "/etc/letsencrypt/live/{{ lb_domain_name }}/fullchain.pem"
 
-    - name: Setup Auto-Renewal for SSL
+    - name: Setup Auto-Renewal
       cron:
-        name: "Renew SSL Certificate"
+        name: Renew SSL Cert
         job: "certbot renew --quiet"
         special_time: weekly

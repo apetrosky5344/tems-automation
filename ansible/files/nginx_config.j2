@@ -1,11 +1,11 @@
 upstream tems_backend {
-    server 10.2.37.61:5000;
-    server 10.2.37.62:5000;
+    server {{ web_server_1 }}:5000;
+    server {{ web_server_2 }}:5000;
 }
 
 server {
     listen 80;
-    server_name yourdomain.com;
+    server_name {{ lb_domain_name }};
 
     location / {
         proxy_pass http://tems_backend;

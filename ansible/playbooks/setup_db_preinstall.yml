@@ -3,8 +3,8 @@
   hosts: databases
   become: true
   vars_files:
-    - vars/vars.yml
-    - vars/secret-vars.yml
+    - ../vars/vars.yml
+    - ../vars/secret-vars.yml
   tasks:
     - name: Update and Upgrade System Packages
       apt:

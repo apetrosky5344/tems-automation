@@ -6,45 +6,37 @@
     - ../vars/vars.yml
     - ../vars/secret-vars.yml
   tasks:
-
-    - name: Update and Upgrade System Packages
+    - name: Update and Upgrade
       apt:
         update_cache: yes
         upgrade: dist
-
-    - name: Install Snap (Required for Certbot)
-      apt:
-        name: snapd
-        state: present
 
     - name: Install Nginx
       apt:
         name: nginx
         state: present
 
-    - name: Configure Nginx for Load Balancing
-      copy:
-        dest: "/etc/nginx/sites-available/tems_loadbalancer"
-        content: |
-          upstream tems_backend {
-              server "{{ web_server_1 }}:5000";
-              server "{{ web_server_2 }}:5000";
-          }
-          server {
-              listen 80;
-              server_name "{{ load_balancer_ip }}";
-              location / {
-                  proxy_pass http://tems_backend;
-              }
-          }
-    - name: Enable Load Balancer
+    - name: Deploy Nginx config template
+      template:
+        src: ../files/nginx_config.j2
+        dest: /etc/nginx/sites-available/tems.conf
+      notify: Reload Nginx
+
+    - name: Enable tems site
       file:
-        src: /etc/nginx/sites-available/tems_loadbalancer
-        dest: /etc/nginx/sites-enabled/tems_loadbalancer
+        src: /etc/nginx/sites-available/tems.conf
+        dest: /etc/nginx/sites-enabled/tems.conf
         state: link
+      notify: Reload Nginx
 
+    - name: Remove default site if present
+      file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+      notify: Reload Nginx
 
-    - name: Restart Nginx
-      systemd:
+  handlers:
+    - name: Reload Nginx
+      service:
         name: nginx
-        state: restarted
+        state: reloaded

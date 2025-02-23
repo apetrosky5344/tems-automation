@@ -3,8 +3,8 @@
   hosts: storageservers
   become: true
   vars_files:
-    - vars/vars.yml
-    - vars/secret-vars.yml
+    - ../vars/vars.yml
+    - ../vars/secret-vars.yml
   tasks:
     - name: Update and Upgrade System Packages
       apt:
@@ -17,15 +17,15 @@
         dest: "/usr/local/bin/minio"
         mode: '0755'
 
-    - name: Create MinIO Directories
+    - name: Create MinIO Data Directory
       file:
-        path: "/data/minio"
+        path: "{{ minio_data_dir }}"
         state: directory
         owner: root
         group: root
         mode: '0755'
 
-    - name: Create MinIO Service
+    - name: Create MinIO systemd service
       copy:
         dest: "/etc/systemd/system/minio.service"
         content: |
@@ -34,18 +34,21 @@
           After=network.target
 
           [Service]
-          ExecStart=/usr/local/bin/minio server /data/minio --console-address ':9001'
+          User=root
+          Group=root
+          Environment="MINIO_ROOT_USER={{ minio_root_user }}"
+          Environment="MINIO_ROOT_PASSWORD={{ minio_root_password }}"
+          ExecStart=/usr/local/bin/minio server {{ minio_data_dir }} --console-address ":{{ minio_console_port }}"
           Restart=always
+          LimitNOFILE=65536
 
           [Install]
           WantedBy=multi-user.target
-    - name: Reload systemd daemon
+    - name: Reload systemd
       command: systemctl daemon-reload
-      become: true
 
-    - name: Start and Enable MinIO Service
+    - name: Start and Enable MinIO
       systemd:
         name: minio
         state: started
         enabled: yes
-
