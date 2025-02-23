@@ -1,6 +1,6 @@
 ---
 - name: Install and Configure Web Servers (Gunicorn for Flask)
-  hosts: 10.2.37.62
+  hosts: webservers
   become: true
   vars_files:
     - ../vars/vars.yml
