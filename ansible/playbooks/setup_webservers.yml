@@ -1,5 +1,5 @@
 ---
-- name: Install and Configure Web Servers (Gunicorn for Flask)
+- name: Install and Configure Web Servers (Gunicorn for Flask) - Git Clone Approach
   hosts: webservers
   become: true
   vars_files:
@@ -17,67 +17,49 @@
         name:
           - python3-pip
           - python3-venv
-          - nginx   # If needed locally, but the LB is also running Nginx
+          - git
+          - nginx
         state: present
 
-    - name: Create /var/www/tems directory
+    - name: Ensure app directory exists
       file:
-        path: /var/www/tems
+        path: "{{ web_app_dir }}"
         state: directory
-        owner: root
-        group: root
         mode: '0755'
 
-    - name: Create Python virtual environment
-      command: python3 -m venv /var/www/tems/venv
-      args:
-        creates: /var/www/tems/venv
+    - name: Clone TEMS repo from GitHub
+      git:
+        repo: "{{ web_repo_url }}"
+        dest: "{{ web_app_dir }}"
+        version: "{{ web_repo_branch }}"
+        force: yes
 
-    - name: Copy requirements.txt
-      copy:
-        src: ../files/requirements.txt
-        dest: /var/www/tems/requirements.txt
+    - name: Create Python virtual environment
+      command: python3 -m venv venv
+      args:
+        chdir: "{{ web_app_dir }}"
+        creates: "{{ web_app_dir }}/venv/bin/activate"
 
     - name: Install Python packages
       pip:
-        requirements: /var/www/tems/requirements.txt
-        virtualenv: /var/www/tems/venv
+        virtualenv: "{{ web_app_dir }}/venv"
+        requirements: "{{ web_app_dir }}/requirements.txt"
 
-    - name: Copy Flask app (app.py)
+    - name: Create environment file
       copy:
-        src: ../files/app.py
-        dest: /var/www/tems/app.py
-        mode: '0755'
+        dest: "{{ web_app_dir }}/.env"
+        content: |
+          DB_NAME={{ db_name }}
+          DB_USER={{ db_user }}
+          DB_PASS={{ db_password }}
+          DB_HOST={{ db_host }}
+          DB_PORT={{ db_port }}
+          SECRET_KEY={{ jwt_secret }}
+      mode: '0600'
 
-    - name: Copy HTML templates
+    - name: Create systemd service for TEMS
       copy:
-        src: ../files/templates/
-        dest: /var/www/tems/templates/
-        mode: '0755'
-      with_fileglob:
-        - "*.html"
-      loop_control:
-        label: "{{ item }}"
-
-    - name: Copy static files
-      copy:
-        src: ../files/static/
-        dest: /var/www/tems/static/
-        mode: '0755'
-      with_fileglob:
-        - "*.css"
-      loop_control:
-        label: "{{ item }}"
-
-    - name: Copy .env
-      copy:
-        src: ../files/env.txt
-        dest: /var/www/tems/.env
-        mode: '0600'
-
-    - name: Create systemd service for TEMS (Gunicorn)
-      copy:
-        dest: /etc/systemd/system/tems_app.service
+        dest: "/etc/systemd/system/{{ app_service_name }}.service"
         content: |
           [Unit]
           Description=TEMS Flask App
@@ -86,9 +68,9 @@
           [Service]
           User=root
           Group=root
-          WorkingDirectory=/var/www/tems
-          EnvironmentFile=/var/www/tems/.env
-          ExecStart=/var/www/tems/venv/bin/gunicorn --bind 0.0.0.0:5000 app:app
+          WorkingDirectory={{ web_app_dir }}
+          EnvironmentFile={{ web_app_dir }}/.env
+          ExecStart={{ web_app_dir }}/venv/bin/gunicorn --bind 0.0.0.0:5000 app:app
           Restart=always
 
           [Install]
@@ -98,6 +80,6 @@
   handlers:
     - name: Restart TEMS
       systemd:
-        name: tems_app
+        name: "{{ app_service_name }}"
         state: restarted
         enabled: yes
