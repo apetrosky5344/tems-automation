@@ -5,7 +5,6 @@
   vars_files:
     - ../vars/vars.yml
     - ../vars/secret-vars.yml
-
   tasks:
     - name: Install Logwatch
       apt:
