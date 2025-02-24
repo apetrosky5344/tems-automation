@@ -2,17 +2,21 @@
 <html>
 <head>
     <title>Login - TEMS</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-    <h1>Login</h1>
-    <form method="post">
-        <label>Email:</label>
-        <input type="email" name="email" required><br><br>
-        
-        <label>Password:</label>
-        <input type="password" name="password" required><br><br>
-        
-        <input type="submit" value="Login">
-    </form>
+    <div class="form-container">
+        <h1>Login</h1>
+        <form method="post">
+            <label>Email:</label>
+            <input type="email" name="email" required>
+
+            <label>Password:</label>
+            <input type="password" name="password" required>
+
+            <input type="submit" value="Login">
+        </form>
+        <p><a href="{{ url_for('register') }}">Need an account? Register here.</a></p>
+    </div>
 </body>
 </html>
