@@ -2,12 +2,13 @@
 <html>
 <head>
     <title>Dashboard - TEMS</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-    <h1>Dashboard</h1>
-    <p>Welcome to your dashboard. Only authenticated users can see this page.</p>
-    <p>
-      <a href="/logout">Logout</a>
-    </p>
+    <div class="form-container">
+        <h1>Dashboard</h1>
+        <p>Welcome to your dashboard. Only authenticated users can see this page.</p>
+        <p><a href="{{ url_for('logout') }}">Logout</a></p>
+    </div>
 </body>
 </html>
