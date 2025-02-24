@@ -1,6 +1,5 @@
 ---
-- name: Install and Configure Web Servers (Gunicorn for Flask) - Git Clone Approach
-  hosts: webservers
+- name: Install and Configure Web Servers (Gunicorn for Flask)
   become: true
   vars_files:
     - ../vars/vars.yml
