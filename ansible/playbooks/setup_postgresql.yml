@@ -5,7 +5,6 @@
   vars_files:
     - ../vars/vars.yml
     - ../vars/secret-vars.yml
-
   tasks:
     - name: Install PostgreSQL
       apt:
@@ -60,8 +59,8 @@
 
     - name: Copy DB schema to server
       copy:
-        src: ../files/UpdatedTemsSQL.sql
-        dest: /var/lib/postgresql/UpdatedTemsSQL.sql
+        src: ../files/schema.sql
+        dest: /var/lib/postgresql/schema.sql
         owner: postgres
         group: postgres
         mode: '0644'
@@ -70,7 +69,7 @@
       become_user: postgres
       postgresql_script:
         db: "{{ db_name }}"
-        path: "/var/lib/postgresql/UpdatedTemsSQL.sql"
+        path: "/var/lib/postgresql/schema.sql"
       when: inventory_hostname == "{{ db_host }}"
 
   handlers:
