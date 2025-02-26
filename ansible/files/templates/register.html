@@ -17,6 +17,10 @@
             <label>Password:</label>
             <input type="password" name="password" required>
 
+            <!-- Optional field for existing tribal members -->
+            <label>Member Number:</label>
+            <input type="text" name="member_number" placeholder="Enter your member number if applicable">
+
             <input type="submit" value="Register">
         </form>
         <p><a href="{{ url_for('login') }}">Already have an account? Login here.</a></p>

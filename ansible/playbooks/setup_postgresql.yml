@@ -2,6 +2,7 @@
 - name: Install and Configure PostgreSQL
   hosts: databases
   become: true
+
   vars_files:
     - ../vars/vars.yml
     - ../vars/secret-vars.yml
@@ -33,6 +34,12 @@
           host    replication     {{ pg_replica_user }}     0.0.0.0/0            md5
       notify: Restart PostgreSQL
 
+    - name: Create a directory if it does not exist
+      ansible.builtin.file:
+        path: /tmp/.ansible-remote
+        state: directory
+        mode: '0777'
+
     - name: Create TEMS Database
       become_user: postgres
       postgresql_db:
@@ -46,7 +53,7 @@
         name: "{{ db_user }}"
         password: "{{ db_password }}"
         db: "{{ db_name }}"
-        priv: "ALL"
+        priv: ALL
         state: present
 
     - name: Create Replication User
@@ -58,20 +65,23 @@
         state: present
 
     - name: Copy DB schema to server
+      become_user: postgres
       copy:
         src: ../files/schema.sql
         dest: /var/lib/postgresql/schema.sql
         owner: postgres
         group: postgres
-        mode: '0644'
+        mode: '0777'
 
     - name: Load Initial Database Schema (only on primary)
       become_user: postgres
-      postgresql_script:
+      community.postgresql.postgresql_query:
         db: "{{ db_name }}"
-        path: "/var/lib/postgresql/schema.sql"
-      when: inventory_hostname == "{{ db_host }}"
+        query: "{{ lookup('file', '../files/schema.sql') }}"
+      run_once: true
+      delegate_to: "{{ db_host }}"
 
+   
   handlers:
     - name: Restart PostgreSQL
       systemd:

@@ -14,6 +14,8 @@
     - name: Install Essential Utilities
       apt:
         name:
+          - python3-psycopg2
+          - acl
           - vim
           - curl
           - wget

@@ -1,5 +1,6 @@
 ---
 - name: Install and Configure Web Servers (Gunicorn for Flask)
+  hosts: webservers
   become: true
   vars_files:
     - ../vars/vars.yml
@@ -54,7 +55,11 @@
           DB_HOST={{ db_host }}
           DB_PORT={{ db_port }}
           SECRET_KEY={{ jwt_secret }}
-      mode: '0600'
+
+    - name: Set permissions on environment file
+      file:
+        path: "{{ web_app_dir }}/.env"
+        mode: '0600'
 
     - name: Create systemd service for TEMS
       copy:

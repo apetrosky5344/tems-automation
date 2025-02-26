@@ -5,18 +5,18 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 
-# Load SECRET_KEY from environment variables
+# Load SECRET_KEY from environment or fall back to a default
 app.secret_key = os.getenv("SECRET_KEY", "supersecretkey")
 
 # Database configuration from environment variables
 db_name = os.getenv("DB_NAME", "tems_db")
 db_user = os.getenv("DB_USER", "tems_admin")
-db_pass = os.getenv("DB_PASS", "MarleeGrace17")
+db_pass = os.getenv("DB_PASS", "securepassword")
 db_host = os.getenv("DB_HOST", "127.0.0.1")
 db_port = os.getenv("DB_PORT", "5432")
 
 def get_db_connection():
-    """Create and return a new PostgreSQL database connection."""
+    """Creates a new PostgreSQL connection using environment variables."""
     return psycopg2.connect(
         dbname=db_name,
         user=db_user,
@@ -34,12 +34,15 @@ def login():
     if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
+
+        # Query the database for matching user using the correct column names
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute('SELECT id, password FROM users WHERE email = %s', (email,))
+        cur.execute('SELECT user_id, password_hash FROM users WHERE email = %s', (email,))
         user = cur.fetchone()
         cur.close()
         conn.close()
+
         if user and check_password_hash(user[1], password):
             session['user_id'] = user[0]
             return redirect(url_for('dashboard'))
@@ -54,13 +57,21 @@ def register():
         email = request.form['email']
         raw_password = request.form['password']
         password_hash = generate_password_hash(raw_password)
+        member_number = request.form.get('member_number')  # Optional field
+
+        # Insert the new user into the DB, associating the member number if provided.
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute('INSERT INTO users (name, email, password_hash) VALUES (%s, %s, %s)',
-                    (name, email, password_hash))
+        cur.execute('''
+            INSERT INTO users (name, email, password_hash, member_id)
+            VALUES (%s, %s, %s, %s)
+            RETURNING user_id
+        ''', (name, email, password_hash, member_number if member_number.strip() else None))
+        new_user_id = cur.fetchone()[0]
         conn.commit()
         cur.close()
         conn.close()
+
         return redirect(url_for('login'))
     return render_template('register.html')
 
@@ -76,6 +87,5 @@ def logout():
     return redirect(url_for('home'))
 
 if __name__ == '__main__':
-    # For local testing; in production use Gunicorn
+    # For local testing only. In production, use Gunicorn or another WSGI server.
     app.run(host='0.0.0.0', port=5000, debug=True)
-
