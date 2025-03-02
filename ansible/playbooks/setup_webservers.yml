@@ -37,13 +37,13 @@
     - name: Create Python virtual environment in app code directory
       command: python3 -m venv venv
       args:
-        chdir: "{{ web_app_dir }}/files"
-        creates: "{{ web_app_dir }}/files/venv/bin/activate"
+        chdir: "{{ web_app_dir }}/ansible/files"
+        creates: "{{ web_app_dir }}/ansible/files/venv/bin/activate"
 
     - name: Install Python packages
       pip:
-        virtualenv: "{{ web_app_dir }}/files/venv"
-        requirements: "{{ web_app_dir }}/files/requirements.txt"
+        virtualenv: "{{ web_app_dir }}/ansible/files/venv"
+        requirements: "{{ web_app_dir }}/ansible/files/requirements.txt"
 
     - name: Copy environment file from repository to deployment root
       copy:
