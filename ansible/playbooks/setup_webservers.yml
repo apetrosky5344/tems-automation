@@ -49,7 +49,7 @@
       copy:
         src: "{{ web_app_dir }}/files/env.txt"
         dest: "{{ web_app_dir }}/.env"
-      mode: '0600'
+        mode: '0600'
 
     - name: Create systemd service for TEMS
       copy:
