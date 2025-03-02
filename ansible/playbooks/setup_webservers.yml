@@ -45,12 +45,12 @@
         virtualenv: "{{ web_app_dir }}/ansible/files/venv"
         requirements: "{{ web_app_dir }}/ansible/files/requirements.txt"
 
-    - name: Copy environment file to ansible/files
-      copy:
-        src: "{{ web_app_dir }}/ansible/files/env.txt"
-        dest: "{{ web_app_dir }}/ansible/files/.env"
-        mode: '0600'
-        remote_src: yes
+    - name: Generate .env file from Jinja2 template
+      template:
+       src: env.j2
+       dest: "{{ web_app_dir }}/ansible/files/.env"
+       mode: "0600"
+       remote_src: yes
 
     - name: Create systemd service for TEMS
       copy:
