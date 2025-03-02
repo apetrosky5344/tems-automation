@@ -34,7 +34,7 @@
         version: "{{ web_repo_branch }}"
         force: yes
 
-    - name: Create Python virtual environment in app code directory
+    - name: Create Python virtual environment
       command: python3 -m venv venv
       args:
         chdir: "{{ web_app_dir }}/ansible/files"
@@ -45,10 +45,10 @@
         virtualenv: "{{ web_app_dir }}/ansible/files/venv"
         requirements: "{{ web_app_dir }}/ansible/files/requirements.txt"
 
-    - name: Copy environment file from repository to deployment root
+    - name: Copy environment file to ansible/files
       copy:
         src: "{{ web_app_dir }}/ansible/files/env.txt"
-        dest: "{{ web_app_dir }}/.env"
+        dest: "{{ web_app_dir }}/ansible/files/.env"
         mode: '0600'
         remote_src: yes
 
@@ -63,9 +63,9 @@
           [Service]
           User=root
           Group=root
-          WorkingDirectory={{ web_app_dir }}/files
-          EnvironmentFile={{ web_app_dir }}/.env
-          ExecStart={{ web_app_dir }}/files/venv/bin/gunicorn --bind 0.0.0.0:5000 app:app
+          WorkingDirectory={{ web_app_dir }}/ansible/files
+          EnvironmentFile={{ web_app_dir }}/ansible/files/.env
+          ExecStart={{ web_app_dir }}/ansible/files/venv/bin/gunicorn --bind 0.0.0.0:5000 app:app
           Restart=always
 
           [Install]
