@@ -19,6 +19,6 @@ web_repo_url: "https://github.com/apetrosky5344/tems-automation.git"
 web_repo_branch: "main"
 
 # Deployment directory for the web app (update per environment)
-web_app_dir: "/opt/tems_app"
+web_app_dir: "/opt/tems_app/ansible/files"
 app_service_name: "tems_app"
 
