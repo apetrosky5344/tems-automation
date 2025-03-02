@@ -35,9 +35,10 @@ def login():
         email = request.form['email']
         password = request.form['password']
 
-        # Query the database for matching user using the correct column names
+        # Query the database for matching user
         conn = get_db_connection()
         cur = conn.cursor()
+        # Make sure to select user_id and password_hash from the schema
         cur.execute('SELECT user_id, password_hash FROM users WHERE email = %s', (email,))
         user = cur.fetchone()
         cur.close()
@@ -59,14 +60,14 @@ def register():
         password_hash = generate_password_hash(raw_password)
         member_number = request.form.get('member_number')  # Optional field
 
-        # Insert the new user into the DB, associating the member number if provided.
+        # Insert the new user into the DB, associating the member number if provided
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute('''
             INSERT INTO users (name, email, password_hash, member_id)
             VALUES (%s, %s, %s, %s)
             RETURNING user_id
-        ''', (name, email, password_hash, member_number if member_number.strip() else None))
+        ''', (name, email, password_hash, member_number if member_number and member_number.strip() else None))
         new_user_id = cur.fetchone()[0]
         conn.commit()
         cur.close()
