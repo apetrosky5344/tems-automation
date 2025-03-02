@@ -50,6 +50,7 @@
         src: "{{ web_app_dir }}/ansible/files/env.txt"
         dest: "{{ web_app_dir }}/.env"
         mode: '0600'
+        remote_src: yes
 
     - name: Create systemd service for TEMS
       copy:
