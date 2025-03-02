@@ -1,5 +1,5 @@
 ---
-- name: Install and Configure Web Servers (Gunicorn for Flask)
+- name: Install and Configure Web Servers (Gunicorn for Flask) - Git Clone Approach
   hosts: webservers
   become: true
   vars_files:
@@ -21,7 +21,7 @@
           - nginx
         state: present
 
-    - name: Ensure app directory exists
+    - name: Ensure deployment directory exists
       file:
         path: "{{ web_app_dir }}"
         state: directory
@@ -34,32 +34,22 @@
         version: "{{ web_repo_branch }}"
         force: yes
 
-    - name: Create Python virtual environment
+    - name: Create Python virtual environment in app code directory
       command: python3 -m venv venv
       args:
-        chdir: "{{ web_app_dir }}"
-        creates: "{{ web_app_dir }}/venv/bin/activate"
+        chdir: "{{ web_app_dir }}/files"
+        creates: "{{ web_app_dir }}/files/venv/bin/activate"
 
     - name: Install Python packages
       pip:
-        virtualenv: "{{ web_app_dir }}/venv"
-        requirements: "{{ web_app_dir }}/requirements.txt"
+        virtualenv: "{{ web_app_dir }}/files/venv"
+        requirements: "{{ web_app_dir }}/files/requirements.txt"
 
-    - name: Create environment file
+    - name: Copy environment file from repository to deployment root
       copy:
+        src: "{{ web_app_dir }}/files/env.txt"
         dest: "{{ web_app_dir }}/.env"
-        content: |
-          DB_NAME={{ db_name }}
-          DB_USER={{ db_user }}
-          DB_PASS={{ db_password }}
-          DB_HOST={{ db_host }}
-          DB_PORT={{ db_port }}
-          SECRET_KEY={{ jwt_secret }}
-
-    - name: Set permissions on environment file
-      file:
-        path: "{{ web_app_dir }}/.env"
-        mode: '0600'
+      mode: '0600'
 
     - name: Create systemd service for TEMS
       copy:
@@ -72,9 +62,9 @@
           [Service]
           User=root
           Group=root
-          WorkingDirectory={{ web_app_dir }}
+          WorkingDirectory={{ web_app_dir }}/files
           EnvironmentFile={{ web_app_dir }}/.env
-          ExecStart={{ web_app_dir }}/venv/bin/gunicorn --bind 0.0.0.0:5000 app:app
+          ExecStart={{ web_app_dir }}/files/venv/bin/gunicorn --bind 0.0.0.0:5000 app:app
           Restart=always
 
           [Install]
