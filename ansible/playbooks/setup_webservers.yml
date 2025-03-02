@@ -47,7 +47,7 @@
 
     - name: Generate .env file from Jinja2 template
       template:
-       src: "{{ web_app_dir }}/ansible/files/env.j2"
+       src: "templates/env.j2" 
        dest: "{{ web_app_dir }}/ansible/files/.env"
        mode: "0600"
        remote_src: yes
