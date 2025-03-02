@@ -47,7 +47,7 @@
 
     - name: Copy environment file from repository to deployment root
       copy:
-        src: "{{ web_app_dir }}/files/env.txt"
+        src: "{{ web_app_dir }}/ansible/files/env.txt"
         dest: "{{ web_app_dir }}/.env"
         mode: '0600'
 
